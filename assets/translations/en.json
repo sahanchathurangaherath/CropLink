@@ -1,0 +1,21 @@
+{
+  "app_title": "CropLink",
+  "welcome_sign_in": "Sign In",
+  "welcome_sign_up": "Sign Up",
+  "home": "Home",
+  "news": "News",
+  "cart": "Cart",
+  "account": "Account",
+  "buyer": "Buyer",
+  "seller": "Seller",
+  "search_hint": "Search products...",
+  "category_all": "All",
+  "post_item": "Post an Item",
+  "name": "Name",
+  "category": "Category",
+  "unit": "Unit",
+  "price": "Price",
+  "submit": "Submit",
+  "language": "Language",
+  "sign_out": "Sign Out"
+}

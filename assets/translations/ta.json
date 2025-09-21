@@ -1,0 +1,21 @@
+{
+  "app_title": "கிராப்லிங்க்",
+  "welcome_sign_in": "உள்நுழைய",
+  "welcome_sign_up": "பதிவு செய்ய",
+  "home": "Home",
+  "news": "News",
+  "cart": "Cart",
+  "account": "Account",
+  "buyer": "Buyer",
+  "seller": "Seller",
+  "search_hint": "பொருட்களைத் தேடுங்கள்...",
+  "category_all": "அனைத்து",
+  "post_item": "Post an Item",
+  "name": "Name",
+  "category": "Category",
+  "unit": "Unit",
+  "price": "Price",
+  "submit": "Submit",
+  "language": "Language",
+  "sign_out": "Sign Out"
+}
