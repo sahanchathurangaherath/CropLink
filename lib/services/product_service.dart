@@ -9,7 +9,8 @@ class ProductService {
 
   Stream<List<Product>> streamProducts({String? category, String? query}) {
     Query<Product> q = _col.orderBy('createdAt', descending: true);
-    if (category != null && category != 'all') {
+    final bool hasCategory = category != null && category != 'all';
+    if (hasCategory) {
       q = q.where('category', isEqualTo: category);
     }
     return q.snapshots().map((s) {

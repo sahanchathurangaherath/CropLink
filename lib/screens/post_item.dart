@@ -8,7 +8,8 @@ import '../services/storage_service.dart';
 import '../models/product.dart';
 
 class PostItemScreen extends StatefulWidget {
-  const PostItemScreen({super.key});
+  final String category;
+  const PostItemScreen({super.key, required this.category});
 
   @override
   State<PostItemScreen> createState() => _PostItemScreenState();
@@ -16,15 +17,23 @@ class PostItemScreen extends StatefulWidget {
 
 class _PostItemScreenState extends State<PostItemScreen> {
   final _name = TextEditingController();
-  String _category = 'vegetables';
+  late String _category;
+
   final _company = TextEditingController();
   final _quantity = TextEditingController(text: '1 kg');
   final _price = TextEditingController();
   final _location = TextEditingController();
   File? _image;
 
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.category;
+  }
+
   Future<void> _pick() async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 75);
+    final x = await ImagePicker()
+        .pickImage(source: ImageSource.gallery, imageQuality: 75);
     if (x != null) setState(() => _image = File(x.path));
   }
 
@@ -61,12 +70,15 @@ class _PostItemScreenState extends State<PostItemScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: 'Name')),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _category,
+              initialValue: _category,
               items: const [
-                DropdownMenuItem(value: 'vegetables', child: Text('Vegetables')),
+                DropdownMenuItem(
+                    value: 'vegetables', child: Text('Vegetables')),
                 DropdownMenuItem(value: 'fruits', child: Text('Fruits')),
                 DropdownMenuItem(value: 'grains', child: Text('Grains')),
                 DropdownMenuItem(value: 'leafy', child: Text('Leafy')),
@@ -75,19 +87,32 @@ class _PostItemScreenState extends State<PostItemScreen> {
               decoration: const InputDecoration(labelText: 'Category'),
             ),
             const SizedBox(height: 8),
-            TextField(controller: _company, decoration: const InputDecoration(labelText: 'Company')),
+            TextField(
+                controller: _company,
+                decoration: const InputDecoration(labelText: 'Company')),
             const SizedBox(height: 8),
-            TextField(controller: _quantity, decoration: const InputDecoration(labelText: 'Unit (e.g. 1 kg)')),
+            TextField(
+                controller: _quantity,
+                decoration:
+                    const InputDecoration(labelText: 'Unit (e.g. 1 kg)')),
             const SizedBox(height: 8),
-            TextField(controller: _price, decoration: const InputDecoration(labelText: 'Price (Rs.)'), keyboardType: TextInputType.number),
+            TextField(
+                controller: _price,
+                decoration: const InputDecoration(labelText: 'Price (Rs.)'),
+                keyboardType: TextInputType.number),
             const SizedBox(height: 8),
-            TextField(controller: _location, decoration: const InputDecoration(labelText: 'Location (City)')),
+            TextField(
+                controller: _location,
+                decoration:
+                    const InputDecoration(labelText: 'Location (City)')),
             const SizedBox(height: 8),
             Row(
               children: [
-                ElevatedButton(onPressed: _pick, child: const Text('Pick Image')),
+                ElevatedButton(
+                    onPressed: _pick, child: const Text('Pick Image')),
                 const SizedBox(width: 12),
-                if (_image != null) const Icon(Icons.check_circle, color: Colors.green),
+                if (_image != null)
+                  const Icon(Icons.check_circle, color: Colors.green),
               ],
             ),
             const SizedBox(height: 16),

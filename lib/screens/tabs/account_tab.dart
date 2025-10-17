@@ -10,59 +10,61 @@ class AccountTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF17904A),
+        title: const Text('Account'),
+        centerTitle: true,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
-          Text(
-            auth.user?.email ?? 'Guest',
-            style: Theme.of(context).textTheme.titleLarge,
+          ListTile(
+            leading: const Icon(Icons.person, color: Color(0xFF17904A)),
+            title: Text(auth.user?.email ?? 'Guest',
+                style: Theme.of(context).textTheme.titleLarge),
           ),
-          const SizedBox(height: 8),
-          // Role picker with Firestore persistence via AuthProvider.setRole
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Role:'),
-              const SizedBox(width: 12),
-              DropdownButton<String>(
-                value: auth.role,
-                items: const [
-                  DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
-                  DropdownMenuItem(value: 'seller', child: Text('Seller')),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    context.read<AuthProvider>().setRole(v);
-                  }
-                },
-              ),
-            ],
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings, color: Color(0xFF17904A)),
+            title: const Text('Settings'),
+            onTap: () {},
           ),
-          const SizedBox(height: 24),
-          // Language dropdown (kept from your version)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              DropdownButton<String>(
-                value: context.locale.languageCode,
-                items: const [
-                  DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'si', child: Text('සිංහල')),
-                  DropdownMenuItem(value: 'ta', child: Text('தமிழ்')),
-                ],
-                onChanged: (v) {
-                  if (v == null) return;
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person, color: Color(0xFF17904A)),
+            title: const Text('Buyer'),
+            onTap: () => context.read<AuthProvider>().setRole('buyer'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person, color: Color(0xFF17904A)),
+            title: const Text('Seller'),
+            onTap: () => context.read<AuthProvider>().setRole('seller'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.language, color: Color(0xFF17904A)),
+            title: const Text('Language'),
+            trailing: DropdownButton<String>(
+              value: context.locale.languageCode,
+              items: const [
+                DropdownMenuItem(value: 'en', child: Text('English')),
+                DropdownMenuItem(value: 'si', child: Text('සිංහල')),
+                DropdownMenuItem(value: 'ta', child: Text('தமிழ்')),
+              ],
+              onChanged: (v) {
+                if (v != null) {
                   context.setLocale(Locale(v));
-                },
-              ),
-            ],
+                }
+              },
+            ),
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: auth.signedIn ? () => auth.signOut() : null,
-            child: Text('sign_out'.tr()),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Color(0xFF17904A)),
+            title: Text('sign_out'.tr()),
+            onTap: auth.signedIn ? () => auth.signOut() : null,
           ),
         ],
       ),

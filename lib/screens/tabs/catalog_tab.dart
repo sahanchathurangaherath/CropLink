@@ -9,11 +9,17 @@ import '../../widgets/product_card.dart';
 import '../post_item.dart';
 
 class CatalogTab extends StatelessWidget {
-  const CatalogTab({super.key});
+  final String? initialCategory;
+  const CatalogTab({super.key, this.initialCategory});
 
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<CatalogProvider>();
+    if (initialCategory != null && prov.category != initialCategory) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<CatalogProvider>().category = initialCategory!;
+      });
+    }
     final cart = context.watch<CartProvider>();
     final auth = context.watch<AuthProvider>();
 
@@ -26,16 +32,27 @@ class CatalogTab extends StatelessWidget {
               const Expanded(child: SizedBox.shrink()),
               SegmentedButton(
                 segments: const [
-                  ButtonSegment(value: 'buyer', label: Text('Buyer'), icon: Icon(Icons.store)),
-                  ButtonSegment(value: 'seller', label: Text('Seller'), icon: Icon(Icons.agriculture)),
+                  ButtonSegment(
+                      value: 'buyer',
+                      label: Text('Buyer'),
+                      icon: Icon(Icons.store)),
+                  ButtonSegment(
+                      value: 'seller',
+                      label: Text('Seller'),
+                      icon: Icon(Icons.agriculture)),
                 ],
                 selected: <String>{auth.role},
-                onSelectionChanged: (s) => context.read<AuthProvider>().setRole(s.first),
+                onSelectionChanged: (s) =>
+                    context.read<AuthProvider>().setRole(s.first),
               ),
               const SizedBox(width: 8),
               if (auth.role == 'seller')
                 FilledButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PostItemScreen())),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              PostItemScreen(category: prov.category))),
                   icon: const Icon(Icons.add),
                   label: const Text('Post'),
                 ),
@@ -54,7 +71,9 @@ class CatalogTab extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final list = snapshot.data ?? [];
-                if (list.isEmpty) return const Center(child: Text('No products'));
+                if (list.isEmpty) {
+                  return const Center(child: Text('No products'));
+                }
                 return ListView.builder(
                   itemCount: list.length,
                   itemBuilder: (context, i) {

@@ -1,1 +1,27 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"croplink-ed268","appId":"1:172901475024:android:1edf5beb9ae2b7bc55b4d5","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"croplink-ed268","configurations":{"android":"1:172901475024:android:1edf5beb9ae2b7bc55b4d5","ios":"1:172901475024:ios:eba985fb4479042055b4d5","web":"1:172901475024:web:2086f05e3498e17055b4d5"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "croplink-ed268",
+          "appId": "1:172901475024:android:1edf5beb9ae2b7bc55b4d5",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "croplink-ed268",
+          "configurations": {
+            "android": "1:172901475024:android:1edf5beb9ae2b7bc55b4d5",
+            "ios": "1:172901475024:ios:eba985fb4479042055b4d5",
+            "web": "1:172901475024:web:2086f05e3498e17055b4d5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

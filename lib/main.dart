@@ -7,11 +7,8 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/catalog_provider.dart';
-
-import 'screens/auth/auth_gate.dart';
-import 'screens/auth/sign_in_screen.dart';
-import 'screens/auth/sign_up_screen.dart';
-import 'screens/home.dart';
+import 'routes/app_routes.dart';
+import 'routes/route_generator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,13 +42,12 @@ class RootApp extends StatelessWidget {
         locale: context.locale,
         supportedLocales: context.supportedLocales,
         localizationsDelegates: context.localizationDelegates,
-        home: const AuthGate(),
-        routes: {
-          '/signin': (_) => const SignInScreen(),
-          '/signup': (_) => const SignUpScreen(),
-          '/home': (_) => const HomeScreen(),
-        },
-        theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF2A9D8F)),
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: const Color(0xFF2A9D8F),
+        ),
+        initialRoute: AppRoutes.welcome,
+        onGenerateRoute: RouteGenerator.generateRoute,
       ),
     );
   }

@@ -22,12 +22,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(
+                controller: _email,
+                decoration: const InputDecoration(labelText: 'Email')),
             const SizedBox(height: 8),
-            TextField(controller: _pwd, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            TextField(
+                controller: _pwd,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _role,
+              initialValue: _role,
               items: const [
                 DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
                 DropdownMenuItem(value: 'seller', child: Text('Seller')),
@@ -38,7 +43,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () async {
-                await context.read<AuthProvider>().signUp(_email.text, _pwd.text);
+                await context
+                    .read<AuthProvider>()
+                    .signUp(_email.text, _pwd.text);
                 context.read<AuthProvider>().setRole(_role);
                 if (!mounted) return;
                 Navigator.pushReplacementNamed(context, '/home');
