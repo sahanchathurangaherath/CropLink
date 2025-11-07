@@ -14,4 +14,19 @@ class AuthService {
   Future<void> signOut() => _auth.signOut();
 
   User? get currentUser => _auth.currentUser;
+
+  Future<bool> isEmailVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    await user.reload();
+    return user.emailVerified;
+  }
+
+  Future<void> resendVerificationEmail() async {
+    final user = _auth.currentUser;
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
 }

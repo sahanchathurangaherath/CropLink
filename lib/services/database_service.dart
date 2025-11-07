@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import './local_storage_service.dart';
+import '../models/product.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -167,5 +170,45 @@ class DatabaseService {
       'paymentMethod': paymentMethod,
       'timestamp': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<Product?> getProduct(String productId) async {
+    try {
+      final doc = await _db.collection('products').doc(productId).get();
+      if (doc.exists && doc.data() != null) {
+        return Product.fromMap({'id': doc.id, ...doc.data()!});
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get product: $e');
+    }
+  }
+
+  Future<void> addProduct(Product product, File? imageFile) async {
+    try {
+      if (imageFile != null) {
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${product.id}.jpg';
+        await LocalStorageService.saveFile(
+            fileName, await imageFile.readAsBytes());
+        product.localImagePath = fileName;
+      }
+
+      await _db.collection('products').doc(product.id).set(product.toMap());
+    } catch (e) {
+      throw Exception('Failed to add product: $e');
+    }
+  }
+
+  Future<void> deleteProduct(String productId) async {
+    try {
+      final product = await getProduct(productId);
+      if (product?.localImagePath != null) {
+        await LocalStorageService.deleteFile(product!.localImagePath!);
+      }
+      await _db.collection('products').doc(productId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete product: $e');
+    }
   }
 }

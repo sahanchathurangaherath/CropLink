@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:corplink/services/storage_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/storage_service.dart';
+import '../../models/product.dart';
+import '../../services/database_service.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String categoryId;
@@ -25,6 +28,7 @@ class AddItemScreenState extends State<AddItemScreen> {
   final _descriptionController = TextEditingController();
   final _storageService = StorageService();
   File? _selectedImage;
+  final _user = FirebaseAuth.instance.currentUser;
 
   Future<void> _pickImage() async {
     final image = await _storageService.pickImage();
@@ -35,47 +39,38 @@ class AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  Future<void> _saveItem() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final newProduct = Product(
+          id: '',
+          name: _nameController.text,
+          price: int.parse(_priceController.text),
+          quantity: _quantityController.text,
+          imageUrl: '',
+          createdAt: Timestamp.now(),
+          sellerUid: _user?.uid ?? '',
+          category: widget.categoryId,
+          company: 'Default Company',
+          location: 'Default Location',
+          rating: 0,
+          details: {
+            'description': _descriptionController.text,
+            'categoryId': widget.categoryId,
+            'subcategoryId': widget.subcategoryId,
+          },
+        );
 
-    try {
-      String? imageUrl;
-      if (_selectedImage != null) {
-        // First upload the image
-        imageUrl = await _storageService.uploadItemImage(
-          _selectedImage!,
-          widget.categoryId,
-          widget.subcategoryId,
-          _nameController.text.toLowerCase(),
+        await DatabaseService().addProduct(newProduct, _selectedImage);
+
+        if (!mounted) return;
+        Navigator.pop(context);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding product: $e')),
         );
       }
-
-      // Then save the item with the image URL
-      await FirebaseFirestore.instance
-          .collection('categories')
-          .doc(widget.categoryId)
-          .collection('subcategories')
-          .doc(widget.subcategoryId)
-          .collection('items')
-          .add({
-        'name': _nameController.text,
-        'price': double.parse(_priceController.text),
-        'quantity': int.parse(_quantityController.text),
-        'description': _descriptionController.text,
-        'imageUrl': imageUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item added successfully')),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
     }
   }
 
@@ -190,7 +185,7 @@ class AddItemScreenState extends State<AddItemScreen> {
 
               // Save button
               ElevatedButton(
-                onPressed: _saveItem,
+                onPressed: _submitForm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF17904A),
                   padding: const EdgeInsets.symmetric(vertical: 16),

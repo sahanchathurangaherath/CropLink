@@ -5,6 +5,7 @@ class AppRoutes {
   static const String signUp = '/sign-up';
   static const String authGate = '/auth-gate';
   static const String home = '/home';
+  static const String login = '/login';
 
   // Item routes
   static const String postItem = '/post-item';

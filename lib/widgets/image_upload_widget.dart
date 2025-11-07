@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/storage_service.dart';
 
-class ImageUploadWidget extends StatelessWidget {
+class ImageUploadWidget extends StatefulWidget {
   final File? selectedImage;
   final Function(File) onImageSelected;
   final Function() onImageRemoved;
@@ -12,15 +12,20 @@ class ImageUploadWidget extends StatelessWidget {
   final double width;
 
   const ImageUploadWidget({
-    Key? key,
+    super.key,
     required this.selectedImage,
     required this.onImageSelected,
     required this.onImageRemoved,
     this.placeholder = 'Add Image',
     this.height = 200,
     this.width = double.infinity,
-  }) : super(key: key);
+  });
 
+  @override
+  State<ImageUploadWidget> createState() => _ImageUploadWidgetState();
+}
+
+class _ImageUploadWidgetState extends State<ImageUploadWidget> {
   Future<void> _pickImage(BuildContext context) async {
     final storageService = StorageService();
 
@@ -53,7 +58,7 @@ class ImageUploadWidget extends StatelessWidget {
     if (source != null) {
       final File? image = await storageService.pickImage(source: source);
       if (image != null) {
-        onImageSelected(image);
+        widget.onImageSelected(image);
       }
     }
   }
@@ -61,8 +66,8 @@ class ImageUploadWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
-      width: width,
+      height: widget.height,
+      width: widget.width,
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
@@ -71,14 +76,14 @@ class ImageUploadWidget extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: selectedImage != null
+      child: widget.selectedImage != null
           ? Stack(
               fit: StackFit.expand,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.file(
-                    selectedImage!,
+                    widget.selectedImage!,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -86,11 +91,11 @@ class ImageUploadWidget extends StatelessWidget {
                   top: 8,
                   right: 8,
                   child: Material(
-                    color: Colors.white.withOpacity(0.8),
+                    color: const Color.fromRGBO(255, 255, 255, 0.8),
                     shape: const CircleBorder(),
                     child: IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: onImageRemoved,
+                      onPressed: widget.onImageRemoved,
                       color: Colors.black87,
                     ),
                   ),
@@ -110,7 +115,7 @@ class ImageUploadWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    placeholder,
+                    widget.placeholder,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,

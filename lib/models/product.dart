@@ -3,57 +3,86 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Product {
   final String id;
   final String name;
+  final int price;
+  final String quantity;
+  final String imageUrl;
+  String? localImagePath;
+  final Timestamp createdAt;
+  final String sellerUid;
   final String category;
   final String company;
-  final String quantity;
-  final int price;
   final String location;
-  final String imageUrl;
-  final String sellerUid;
-  final double rating;
-  final Timestamp createdAt;
+  final int rating;
+  final Map<String, dynamic> details;
 
   Product({
     required this.id,
     required this.name,
+    required this.price,
+    required this.quantity,
+    required this.imageUrl,
+    this.localImagePath,
+    required this.createdAt,
+    required this.sellerUid,
     required this.category,
     required this.company,
-    required this.quantity,
-    required this.price,
     required this.location,
-    required this.imageUrl,
-    required this.sellerUid,
     required this.rating,
-    required this.createdAt,
-  });
+    Map<String, dynamic>? details,
+  }) : details = details ?? {};
 
-  factory Product.fromDoc(DocumentSnapshot<Map<String,dynamic>> doc) {
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      'imageUrl': imageUrl,
+      'localImagePath': localImagePath,
+      'createdAt': createdAt,
+      'sellerUid': sellerUid,
+      'category': category,
+      'company': company,
+      'location': location,
+      'rating': rating,
+      'details': details,
+    };
+  }
+
+  static Product fromMap(Map<String, dynamic> map) {
+    return Product(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      price: map['price'] ?? 0,
+      quantity: map['quantity'] ?? '',
+      imageUrl: map['imageUrl'] ?? '',
+      localImagePath: map['localImagePath'],
+      createdAt: map['createdAt'] ?? Timestamp.now(),
+      sellerUid: map['sellerUid'] ?? '',
+      category: map['category'] ?? '',
+      company: map['company'] ?? '',
+      location: map['location'] ?? '',
+      rating: map['rating'] ?? 0,
+      details: Map<String, dynamic>.from(map['details'] ?? {}),
+    );
+  }
+
+  factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data()!;
     return Product(
       id: doc.id,
       name: d['name'] ?? '',
+      price: (d['price'] ?? 0) as int,
+      quantity: d['quantity'] ?? '',
+      imageUrl: d['imageUrl'] ?? '',
+      localImagePath: d['localImagePath'],
+      createdAt: (d['createdAt'] ?? Timestamp.now()) as Timestamp,
+      sellerUid: d['sellerUid'] ?? '',
       category: d['category'] ?? '',
       company: d['company'] ?? '',
-      quantity: d['quantity'] ?? '',
-      price: (d['price'] ?? 0) as int,
       location: d['location'] ?? '',
-      imageUrl: d['imageUrl'] ?? '',
-      sellerUid: d['sellerUid'] ?? '',
-      rating: (d['rating'] ?? 0).toDouble(),
-      createdAt: (d['createdAt'] ?? Timestamp.now()) as Timestamp,
+      rating: (d['rating'] ?? 0) as int,
+      details: d['details'] ?? {},
     );
   }
-
-  Map<String,dynamic> toMap() => {
-    'name': name,
-    'category': category,
-    'company': company,
-    'quantity': quantity,
-    'price': price,
-    'location': location,
-    'imageUrl': imageUrl,
-    'sellerUid': sellerUid,
-    'rating': rating,
-    'createdAt': createdAt,
-  };
 }

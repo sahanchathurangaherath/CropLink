@@ -49,12 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/images/logo.jpg',
-              height: 40,
-              fit: BoxFit.contain,
-              errorBuilder: (context, _, __) => const SizedBox(height: 40),
-            ),
             const SizedBox(height: 4),
             Text(
               'CROP LINK',
@@ -74,8 +68,41 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Sign Out'),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context); // Close dialog
+                        final authProvider = context.read<AuthProvider>();
+                        await authProvider.signOut();
+                        if (!mounted) return;
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.welcome,
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Sign Out'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () => setState(() => _currentIndex = 4), // Account tab
+            onPressed: () => setState(
+                () => _currentIndex = 3), // Fixed index to 3 for Account tab
           ),
         ],
       ),

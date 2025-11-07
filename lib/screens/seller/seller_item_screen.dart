@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import '../../services/local_storage_service.dart';
 
 class SellerItemScreen extends StatefulWidget {
   final String category;
@@ -27,6 +27,18 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
   final _descriptionController = TextEditingController();
   File? _imageFile;
 
+  static const int _pageSize = 10;
+  List<DocumentSnapshot> _items = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -44,18 +56,16 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
     }
   }
 
-  Future<String?> _uploadImage(String itemId) async {
-    if (_imageFile == null) return null;
+  Future<String?> _saveImageLocally(String itemId, File imageFile) async {
     try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('items/${widget.category}/${widget.subcategory}/$itemId.jpg');
-      await ref.putFile(_imageFile!);
-      return await ref.getDownloadURL();
+      final fileName = '${widget.category}_${widget.subcategory}_$itemId.jpg';
+      await LocalStorageService.saveFile(
+          fileName, await imageFile.readAsBytes());
+      return fileName; // Return filename instead of URL
     } catch (e) {
       if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error uploading image: $e')),
+        SnackBar(content: Text('Error saving image: $e')),
       );
       return null;
     }
@@ -80,10 +90,10 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
           .doc(widget.subcategory)
           .collection('items');
 
-      final newItemRef = itemsRef.doc(); // auto id
-      String? imageUrl;
+      final newItemRef = itemsRef.doc();
+      String? localImagePath;
       if (_imageFile != null) {
-        imageUrl = await _uploadImage(newItemRef.id);
+        localImagePath = await _saveImageLocally(newItemRef.id, _imageFile!);
       }
 
       await newItemRef.set({
@@ -91,8 +101,8 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
         'price': double.parse(_priceController.text),
         'quantity': int.parse(_quantityController.text),
         'description': _descriptionController.text.trim(),
-        'imageUrl': imageUrl,
-        'sellerUid': user.uid, // IMPORTANT: matches security rules
+        'localImagePath': localImagePath, // Store local path instead of URL
+        'sellerUid': user.uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -204,6 +214,50 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
     );
   }
 
+  Future<void> _loadItems() async {
+    if (!_hasMore || _isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      var query = FirebaseFirestore.instance
+          .collection('categories')
+          .doc(widget.category)
+          .collection('subcategories')
+          .doc(widget.subcategory)
+          .collection('items')
+          .where('sellerUid', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+          .orderBy('createdAt', descending: true)
+          .limit(_pageSize);
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      final snapshots = await query.get();
+
+      if (snapshots.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _lastDocument = snapshots.docs.last;
+        _items.addAll(snapshots.docs);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,124 +265,134 @@ class _SellerItemScreenState extends State<SellerItemScreen> {
         title: Text('${widget.subcategory} Items'),
         backgroundColor: const Color(0xFF17904A),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('categories')
-            .doc(widget.category)
-            .collection('subcategories')
-            .doc(widget.subcategory)
-            .collection('items')
-            .where('sellerUid',
-                isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+            _loadItems();
           }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data!.docs;
-
-          return GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length + 1, // +1 for add card
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: _showAddItemDialog,
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_circle_outline,
-                            size: 48, color: Color(0xFF17904A)),
-                        SizedBox(height: 8),
-                        Text(
-                          'Add New Item',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              final data = docs[index - 1].data() as Map<String, dynamic>;
-              final num price = (data['price'] ?? 0) as num;
-              final int qty = (data['quantity'] ?? 0) is int
-                  ? data['quantity'] as int
-                  : int.tryParse('${data['quantity']}') ?? 0;
-
+          return true;
+        },
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          padding: const EdgeInsets.all(16),
+          itemCount: _items.length + 1 + (_isLoading ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == 0) {
               return Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: data['imageUrl'] != null
-                          ? ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(12)),
-                              child: Image.network('${data['imageUrl']}',
-                                  fit: BoxFit.cover),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(12)),
-                              ),
-                              child: const Icon(Icons.image_not_supported,
-                                  size: 48, color: Colors.grey),
-                            ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${data['name'] ?? 'Unnamed Item'}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Rs. ${price.toDouble().toStringAsFixed(2)}',
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 14),
-                          ),
-                          Text(
-                            'Stock: $qty',
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 14),
-                          ),
-                        ],
+                child: InkWell(
+                  onTap: _showAddItemDialog,
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_circle_outline,
+                          size: 48, color: Color(0xFF17904A)),
+                      SizedBox(height: 8),
+                      Text(
+                        'Add New Item',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
-            },
-          );
-        },
+            }
+
+            if (index == _items.length + 1 && _isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final data = _items[index - 1].data() as Map<String, dynamic>;
+            final num price = (data['price'] ?? 0) as num;
+            final int qty = (data['quantity'] ?? 0) is int
+                ? data['quantity'] as int
+                : int.tryParse('${data['quantity']}') ?? 0;
+
+            return Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: data['localImagePath'] != null
+                        ? FutureBuilder<File?>(
+                            future: LocalStorageService.getFile(
+                                data['localImagePath']),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              }
+                              if (snapshot.hasError ||
+                                  !snapshot.hasData ||
+                                  snapshot.data == null) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.error),
+                                );
+                              }
+                              return ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                                child: Image.file(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12)),
+                            ),
+                            child: const Icon(Icons.image_not_supported,
+                                size: 48, color: Colors.grey),
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${data['name'] ?? 'Unnamed Item'}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Rs. ${price.toDouble().toStringAsFixed(2)}',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                        Text(
+                          'Stock: $qty',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

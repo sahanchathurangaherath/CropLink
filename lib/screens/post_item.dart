@@ -123,3 +123,60 @@ class _PostItemScreenState extends State<PostItemScreen> {
     );
   }
 }
+
+class PostItem extends StatelessWidget {
+  final Product product;
+
+  const PostItem({super.key, required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            product.localImagePath != null
+                ? LocalImageWidget(
+                    fileName: product.localImagePath!,
+                    height: 300,
+                    width: double.infinity,
+                  )
+                : Image.network(
+                    product.imageUrl,
+                    height: 300,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LocalImageWidget extends StatelessWidget {
+  final String fileName;
+  final double height;
+  final double width;
+
+  const LocalImageWidget({
+    super.key,
+    required this.fileName,
+    required this.height,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: FileImage(File(fileName)),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+}
