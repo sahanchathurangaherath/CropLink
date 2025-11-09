@@ -23,7 +23,7 @@ class LocalImageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<File?>(
-      future: LocalStorageService.getFile(fileName),
+      future: LocalStorageService.getImage(fileName),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return placeholder ??

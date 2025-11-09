@@ -7,23 +7,23 @@ class LocalStorageService {
     return directory.path;
   }
 
-  static Future<File> getLocalFile(String fileName) async {
+  static Future<String> saveImage(
+      String folder, String fileName, File imageFile) async {
     final path = await _localPath;
-    return File('$path/$fileName');
-  }
-
-  static Future<void> saveFile(String fileName, List<int> bytes) async {
-    try {
-      final file = await getLocalFile(fileName);
-      await file.writeAsBytes(bytes);
-    } catch (e) {
-      throw Exception('Failed to save file: $e');
+    final folderPath = '$path/$folder';
+    final folderDir = Directory(folderPath);
+    if (!await folderDir.exists()) {
+      await folderDir.create(recursive: true);
     }
+
+    final String filePath = '$folderPath/$fileName';
+    await imageFile.copy(filePath);
+    return filePath;
   }
 
-  static Future<File?> getFile(String fileName) async {
+  static Future<File?> getImage(String imagePath) async {
     try {
-      final file = await getLocalFile(fileName);
+      final file = File(imagePath);
       if (await file.exists()) {
         return file;
       }
@@ -33,16 +33,14 @@ class LocalStorageService {
     }
   }
 
-  static Future<bool> deleteFile(String fileName) async {
+  static Future<void> deleteImage(String imagePath) async {
     try {
-      final file = await getLocalFile(fileName);
+      final file = File(imagePath);
       if (await file.exists()) {
         await file.delete();
-        return true;
       }
-      return false;
     } catch (e) {
-      return false;
+      // Handle or ignore deletion errors
     }
   }
 }

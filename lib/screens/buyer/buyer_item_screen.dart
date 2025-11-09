@@ -22,45 +22,69 @@ class BuyerItemScreen extends StatelessWidget {
         return;
       }
 
-      // Get the cart reference
+      final itemRef = item.reference;
       final cartRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('cart')
           .doc(item.id);
 
-      // Check if item already exists in cart
-      final cartItem = await cartRef.get();
-      if (cartItem.exists) {
-        // Update quantity
-        await cartRef.update({
-          'quantity': FieldValue.increment(1),
+      // Run transaction: ensure we decrement item quantity and update/add cart atomically
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final freshItemSnap = await tx.get(itemRef);
+        if (!freshItemSnap.exists) {
+          throw Exception('Item no longer available');
+        }
+
+        final itemData = freshItemSnap.data() as Map<String, dynamic>;
+        final currentQty = (itemData['quantity'] is int)
+            ? itemData['quantity'] as int
+            : (int.tryParse('${itemData['quantity']}') ?? 0);
+
+        if (currentQty <= 0) {
+          throw Exception('Item out of stock');
+        }
+
+        final freshCartSnap = await tx.get(cartRef);
+        if (freshCartSnap.exists) {
+          tx.update(cartRef, {
+            'quantity': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          tx.set(cartRef, {
+            'itemId': item.id,
+            'category': category,
+            'subcategory': subcategory,
+            'name': itemData['name'],
+            'price': itemData['price'],
+            'imageUrl': itemData['imageUrl'],
+            'quantity': 1,
+            'addedAt': FieldValue.serverTimestamp(),
+            'sellerId': itemData['sellerId'],
+          });
+        }
+
+        // decrement item quantity
+        tx.update(itemRef, {
+          'quantity': FieldValue.increment(-1),
         });
-      } else {
-        // Add new item to cart
-        final itemData = item.data() as Map<String, dynamic>;
-        await cartRef.set({
-          'itemId': item.id,
-          'category': category,
-          'subcategory': subcategory,
-          'name': itemData['name'],
-          'price': itemData['price'],
-          'imageUrl': itemData['imageUrl'],
-          'quantity': 1,
-          'addedAt': FieldValue.serverTimestamp(),
-          'sellerId': itemData['sellerId'],
-        });
-      }
+      });
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Item added to cart')),
         );
+        // Note: navigation removed so user remains on items screen.
       }
     } catch (e) {
       if (context.mounted) {
+        final msg = e.toString().contains('out of stock') ||
+                e.toString().contains('Item out of stock')
+            ? 'Item is out of stock'
+            : 'Error: $e';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(msg)),
         );
       }
     }

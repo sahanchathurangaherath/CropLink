@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:path/path.dart' as path;
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,28 +16,59 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
-  final _firstName = TextEditingController();
-  final _lastName = TextEditingController();
-  final _password = TextEditingController();
-  final _confirmPassword = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _postalCodeController = TextEditingController();
   String _role = 'buyer';
   bool _loading = false;
   String? _error;
+  File? _imageFile;
+  final _picker = ImagePicker();
 
   @override
   void dispose() {
-    _email.dispose();
-    _firstName.dispose();
-    _lastName.dispose();
-    _password.dispose();
-    _confirmPassword.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _districtController.dispose();
+    _postalCodeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _saveImageLocally(File imageFile) async {
+    try {
+      final directory = await path_provider.getApplicationDocumentsDirectory();
+      final fileName = path.basename(imageFile.path);
+      final savedImage = await imageFile.copy('${directory.path}/$fileName');
+      return savedImage.path;
+    } catch (e) {
+      print('Error saving image: $e');
+      return null;
+    }
   }
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_password.text != _confirmPassword.text) {
+    if (_passwordController.text != _confirmPasswordController.text) {
       setState(() => _error = 'Passwords do not match');
       return;
     }
@@ -42,20 +77,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _error = null;
     });
     try {
+      String? localImagePath;
+      if (_imageFile != null) {
+        localImagePath = await _saveImageLocally(_imageFile!);
+      }
+
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _password.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(cred.user!.uid)
           .set({
         'uid': cred.user!.uid,
-        'firstName': _firstName.text.trim(),
-        'lastName': _lastName.text.trim(),
-        'email': _email.text.trim(),
+        'email': _emailController.text.trim(),
+        'fullName': _fullNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'address': _addressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'district': _districtController.text.trim(),
+        'postalCode': _postalCodeController.text.trim(),
         'role': _role,
         'createdAt': FieldValue.serverTimestamp(),
+        'profileImage': localImagePath, // Store local path instead of URL
       });
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -215,162 +261,60 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                         // Email
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF3F5D8),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          margin: EdgeInsets.only(bottom: 16),
-                          child: TextFormField(
-                            controller: _email,
-                            decoration: InputDecoration(
-                              hintText: _role == 'buyer'
-                                  ? 'Buyer Email'
-                                  : 'Seller Email',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            autofillHints: const [AutofillHints.email],
-                            validator: (v) => (v == null || !v.contains('@'))
-                                ? 'Enter a valid email'
-                                : null,
-                          ),
+                        _buildTextField(
+                          _emailController,
+                          'Email',
+                          TextInputType.emailAddress,
                         ),
-                        // First and Last Name
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFF3F5D8),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                margin: EdgeInsets.only(right: 8, bottom: 16),
-                                child: TextFormField(
-                                  controller: _firstName,
-                                  decoration: InputDecoration(
-                                    hintText: 'First Name',
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 16),
-                                  ),
-                                  autofillHints: const [
-                                    AutofillHints.givenName
-                                  ],
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                          ? 'Enter first name'
-                                          : null,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFF3F5D8),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                margin: EdgeInsets.only(left: 8, bottom: 16),
-                                child: TextFormField(
-                                  controller: _lastName,
-                                  decoration: InputDecoration(
-                                    hintText: 'Last Name',
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 16),
-                                  ),
-                                  autofillHints: const [
-                                    AutofillHints.familyName
-                                  ],
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                          ? 'Enter last name'
-                                          : null,
-                                ),
-                              ),
-                            ),
-                          ],
+                        // Full Name
+                        _buildTextField(
+                          _fullNameController,
+                          'Full Name',
+                          TextInputType.name,
+                        ),
+                        // Phone Number
+                        _buildTextField(
+                          _phoneController,
+                          'Phone Number',
+                          TextInputType.phone,
+                        ),
+                        // Address
+                        _buildTextField(
+                          _addressController,
+                          'Address',
+                          TextInputType.streetAddress,
+                        ),
+                        // City
+                        _buildTextField(
+                          _cityController,
+                          'City',
+                          TextInputType.text,
+                        ),
+                        // District
+                        _buildTextField(
+                          _districtController,
+                          'District',
+                          TextInputType.text,
+                        ),
+                        // Postal Code
+                        _buildTextField(
+                          _postalCodeController,
+                          'Postal Code',
+                          TextInputType.number,
                         ),
                         // Password
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF3F5D8),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          margin: EdgeInsets.only(bottom: 16),
-                          child: TextFormField(
-                            controller: _password,
-                            decoration: InputDecoration(
-                              hintText: 'Password',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                            ),
-                            obscureText: true,
-                            autofillHints: const [AutofillHints.password],
-                            validator: (v) => (v == null || v.length < 6)
-                                ? 'Min 6 characters'
-                                : null,
-                          ),
+                        _buildTextField(
+                          _passwordController,
+                          'Password',
+                          TextInputType.text,
+                          isPassword: true,
                         ),
                         // Confirm Password
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF3F5D8),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          margin: EdgeInsets.only(bottom: 16),
-                          child: TextFormField(
-                            controller: _confirmPassword,
-                            decoration: InputDecoration(
-                              hintText: 'Confirm Password',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                            ),
-                            obscureText: true,
-                            autofillHints: const [AutofillHints.password],
-                            validator: (v) => (v == null || v.length < 6)
-                                ? 'Min 6 characters'
-                                : null,
-                          ),
+                        _buildTextField(
+                          _confirmPasswordController,
+                          'Confirm Password',
+                          TextInputType.text,
+                          isPassword: true,
                         ),
                         if (_error != null) ...[
                           SizedBox(height: 8),
@@ -421,13 +365,96 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 24),
                       ],
-                    ), // Fixed missing closing parenthesis for Form
+                    ),
                   ),
                 ),
               ),
-            ], // Fixed missing closing bracket for Column children
+              // Add image picker and preview widget
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFF3F5D8),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Color(0xFF17904A), width: 2),
+                        ),
+                        child: _imageFile != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.file(
+                                  _imageFile!,
+                                  width: 150,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_photo_alternate,
+                                    size: 40,
+                                    color: Color(0xFF17904A),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Add Image',
+                                    style: TextStyle(
+                                      color: Color(0xFF17904A),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint,
+    TextInputType keyboardType, {
+    bool isPassword = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color(0xFFF3F5D8),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      margin: EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          hintText: hint,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        keyboardType: keyboardType,
+        obscureText: isPassword,
+        validator: (v) =>
+            (v == null || v.trim().isEmpty) ? 'This field is required' : null,
       ),
     );
   }

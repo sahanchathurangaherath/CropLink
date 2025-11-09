@@ -189,9 +189,10 @@ class DatabaseService {
       if (imageFile != null) {
         final fileName =
             '${DateTime.now().millisecondsSinceEpoch}_${product.id}.jpg';
-        await LocalStorageService.saveFile(
-            fileName, await imageFile.readAsBytes());
-        product.localImagePath = fileName;
+        // saveImage expects folder, filename and File -> returns saved file path
+        final savedPath = await LocalStorageService.saveImage(
+            'products', fileName, imageFile);
+        product.localImagePath = savedPath;
       }
 
       await _db.collection('products').doc(product.id).set(product.toMap());
@@ -204,7 +205,7 @@ class DatabaseService {
     try {
       final product = await getProduct(productId);
       if (product?.localImagePath != null) {
-        await LocalStorageService.deleteFile(product!.localImagePath!);
+        await LocalStorageService.deleteImage(product!.localImagePath!);
       }
       await _db.collection('products').doc(productId).delete();
     } catch (e) {
